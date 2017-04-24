@@ -2,4 +2,7 @@
     <string name="app_name">NBAToday</string>
     <string name="appwidget_text">EXAMPLE</string>
     <string name="add_widget">Add widget</string>
+    <string name="status_1">尚未開始</string>
+    <string name="status_2">進行中</string>
+    <string name="status_3">終場</string>
 </resources>
