@@ -32,12 +32,11 @@ import java.util.List;
 public class LiveScoreWidget extends AppWidgetProvider {
     public static ArrayList<Game> GameList;
     public int currentGameNum = 0;
-    public static String ACTION_UPDATE_BUTTON_CLICK = "com.example.ball_pc.nbatoday.UPDATE_BUTTON_CLICK";
+    private final static String ACTION_UPDATE_BUTTON_CLICK = "com.example.ball_pc.nbatoday.APPWIDGET_UPDATE_ACTION";
 
     static void updateAppWidget(final Context context, final AppWidgetManager appWidgetManager,
                                 final int appWidgetId) {
 
-        CharSequence widgetText = context.getString(R.string.appwidget_text);
         // Construct the RemoteViews object
         final RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.live_score_widget);
 
@@ -111,14 +110,12 @@ public class LiveScoreWidget extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         // There may be multiple widgets active, so update all of them
-        // Create an Intent to launch ExampleActivity
-
-        IntentFilter filter1 = new IntentFilter();
-        filter1.addAction(ACTION_UPDATE_BUTTON_CLICK);
-        context.getApplicationContext().registerReceiver(this, filter1);
 
         RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.live_score_widget);
-        remoteViews.setOnClickPendingIntent(R.id.nextButton, getPendingSelfIntent(context, ACTION_UPDATE_BUTTON_CLICK));
+        Intent intent = new Intent(ACTION_UPDATE_BUTTON_CLICK);
+        PendingIntent refreshIntent =
+                PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        remoteViews.setOnClickPendingIntent(R.id.homeLogo, refreshIntent);
 
         for (int appWidgetId : appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId);

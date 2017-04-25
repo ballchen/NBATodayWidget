@@ -22,7 +22,7 @@
         <receiver android:name=".LiveScoreWidget">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.example.ball_pc.nbatoday.action.UPDATE_BUTTON_CLICK" />
+                <action android:name="com.example.ball_pc.nbatoday.APPWIDGET_UPDATE_ACTION" />
             </intent-filter>
 
             <meta-data
