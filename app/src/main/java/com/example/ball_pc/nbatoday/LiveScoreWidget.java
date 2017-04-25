@@ -1,11 +1,13 @@
 package com.example.ball_pc.nbatoday;
 
+import android.app.Activity;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Debug;
 import android.util.Log;
 import android.widget.RemoteViews;
@@ -30,7 +32,7 @@ import java.util.List;
 public class LiveScoreWidget extends AppWidgetProvider {
     public static ArrayList<Game> GameList;
     public int currentGameNum = 0;
-    private static final String SYNC_CLICKED    = "automaticWidgetSyncButtonClick";
+    public static String ACTION_UPDATE_BUTTON_CLICK = "com.example.ball_pc.nbatoday.UPDATE_BUTTON_CLICK";
 
     static void updateAppWidget(final Context context, final AppWidgetManager appWidgetManager,
                                 final int appWidgetId) {
@@ -109,6 +111,15 @@ public class LiveScoreWidget extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         // There may be multiple widgets active, so update all of them
+        // Create an Intent to launch ExampleActivity
+
+        IntentFilter filter1 = new IntentFilter();
+        filter1.addAction(ACTION_UPDATE_BUTTON_CLICK);
+        context.getApplicationContext().registerReceiver(this, filter1);
+
+        RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.live_score_widget);
+        remoteViews.setOnClickPendingIntent(R.id.nextButton, getPendingSelfIntent(context, ACTION_UPDATE_BUTTON_CLICK));
+
         for (int appWidgetId : appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId);
         }
@@ -122,6 +133,27 @@ public class LiveScoreWidget extends AppWidgetProvider {
     @Override
     public void onDisabled(Context context) {
         // Enter relevant functionality for when the last widget is disabled
+    }
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        Log.d("LOG", "onReceive");
+        Log.d("LOG", intent.getAction());
+        if(intent.getAction().equals(ACTION_UPDATE_BUTTON_CLICK)) {
+            Log.d("ACTION", ACTION_UPDATE_BUTTON_CLICK);
+            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+            ComponentName thisAppWidget = new ComponentName(context.getPackageName(), AppWidgetProvider.class.getName());
+            int[] appWidgetIds = appWidgetManager.getAppWidgetIds(thisAppWidget);
+
+            onUpdate(context, appWidgetManager, appWidgetIds);
+        }
+    }
+
+    protected PendingIntent getPendingSelfIntent(Context context, String action) {
+        Intent intent = new Intent(context, getClass());
+        intent.setAction(action);
+        return PendingIntent.getBroadcast(context, 0, intent, 0);
     }
 }
 
