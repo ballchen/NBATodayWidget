@@ -1,11 +1,13 @@
 package com.example.ball_pc.nbatoday;
 
+import android.app.Activity;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Debug;
 import android.util.Log;
 import android.widget.RemoteViews;
@@ -29,16 +31,23 @@ import java.util.List;
  */
 public class LiveScoreWidget extends AppWidgetProvider {
     public static ArrayList<Game> GameList;
-    public int currentGameNum = 0;
-    private static final String SYNC_CLICKED    = "automaticWidgetSyncButtonClick";
+    public static int currentGameNum = 0;
+    public static Game displayGame;
+
+
+    private final static String ACTION_UPDATE_BUTTON_CLICK = "com.example.ball_pc.nbatoday.APPWIDGET_UPDATE_ACTION";
+    private final static String ACTION_NEXT_BUTTON_CLICK = "com.example.ball_pc.nbatoday.APPWIDGET_NEXT_GAME";
+    private final static String ACTION_LAST_BUTTON_CLICK = "com.example.ball_pc.nbatoday.APPWIDGET_LAST_GAME";
 
     static void updateAppWidget(final Context context, final AppWidgetManager appWidgetManager,
                                 final int appWidgetId) {
 
-        CharSequence widgetText = context.getString(R.string.appwidget_text);
         // Construct the RemoteViews object
         final RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.live_score_widget);
 
+        views.setOnClickPendingIntent(R.id.homeLogo, getPendingSelfIntent(context, ACTION_UPDATE_BUTTON_CLICK));
+        views.setOnClickPendingIntent(R.id.nextButton, getPendingSelfIntent(context, ACTION_NEXT_BUTTON_CLICK));
+//        views.setOnClickPendingIntent(R.id.lastButton, getPendingSelfIntent(context, ACTION_LAST_BUTTON_CLICK));
 
         try {
             JsonObjectRequest jsObjRequest = new JsonObjectRequest
@@ -48,32 +57,36 @@ public class LiveScoreWidget extends AppWidgetProvider {
                         public void onResponse(JSONObject response) {
                             try {
                                 JSONArray gameNums = response.getJSONArray("games");
-                                Log.d("ARRAY", gameNums.toString());
                                 Gson gson = new Gson();
                                 String gameStatus = new String();
-                                Game firstGame = gson.fromJson(gameNums.get(0).toString(), Game.class);
 
                                 GameList = new ArrayList<>();
                                 for (int i = 0; i < gameNums.length(); ++ i) {
-                                    Game tempGame = gson.fromJson(gameNums.get(0).toString(), Game.class);
+                                    Game tempGame = gson.fromJson(gameNums.get(i).toString(), Game.class);
                                     GameList.add(tempGame);
                                 }
 
-                                int homeLogoID = context.getResources().getIdentifier(firstGame.home.toLowerCase(), "drawable", context.getPackageName());
-                                int awayLogoID = context.getResources().getIdentifier(firstGame.away.toLowerCase(), "drawable", context.getPackageName());
+                                if(currentGameNum >= GameList.size() || currentGameNum < 0) {
+                                    currentGameNum = 0;
+                                }
 
-                                views.setTextViewText(R.id.homeText, firstGame.home);
-                                views.setTextViewText(R.id.awayText, firstGame.away);
-                                views.setTextViewText(R.id.scoreText, firstGame.score);
+                                displayGame = GameList.get(currentGameNum);
+
+                                int homeLogoID = context.getResources().getIdentifier(displayGame.home.toLowerCase(), "drawable", context.getPackageName());
+                                int awayLogoID = context.getResources().getIdentifier(displayGame.away.toLowerCase(), "drawable", context.getPackageName());
+
+                                views.setTextViewText(R.id.homeText, displayGame.home);
+                                views.setTextViewText(R.id.awayText, displayGame.away);
+                                views.setTextViewText(R.id.scoreText, displayGame.score);
 
                                 views.setImageViewResource(R.id.awayLogo, awayLogoID);
                                 views.setImageViewResource(R.id.homeLogo, homeLogoID);
 
-                                if(firstGame.statusNum == 1) {
+                                if(displayGame.statusNum == 1) {
                                     gameStatus = context.getResources().getString(R.string.status_1);
-                                } else if(firstGame.statusNum == 2) {
+                                } else if(displayGame.statusNum == 2) {
                                     gameStatus = context.getResources().getString(R.string.status_2);
-                                } else if(firstGame.statusNum == 3) {
+                                } else if(displayGame.statusNum == 3) {
                                     gameStatus = context.getResources().getString(R.string.status_3);
                                 }
                                 views.setTextViewText(R.id.game_status, gameStatus);
@@ -109,6 +122,7 @@ public class LiveScoreWidget extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         // There may be multiple widgets active, so update all of them
+
         for (int appWidgetId : appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId);
         }
@@ -122,6 +136,45 @@ public class LiveScoreWidget extends AppWidgetProvider {
     @Override
     public void onDisabled(Context context) {
         // Enter relevant functionality for when the last widget is disabled
+    }
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        if(intent.getAction().equals(ACTION_UPDATE_BUTTON_CLICK)) {
+            callUpdateAppWidget(context);
+        }
+
+        if(intent.getAction().equals(ACTION_NEXT_BUTTON_CLICK)) {
+            if(currentGameNum + 1 < GameList.size()) {
+                currentGameNum ++;
+                callUpdateAppWidget(context);
+            }
+            else if(currentGameNum + 1 >= GameList.size()) {
+                currentGameNum = 0;
+                callUpdateAppWidget(context);
+            }
+        }
+
+        if(intent.getAction().equals(ACTION_LAST_BUTTON_CLICK)) {
+            if(0 <= currentGameNum - 1) {
+                currentGameNum --;
+                callUpdateAppWidget(context);
+            }
+        }
+    }
+
+    protected static PendingIntent getPendingSelfIntent(Context context, String action) {
+        Intent intent = new Intent(context, LiveScoreWidget.class);
+        intent.setAction(action);
+        return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    private void callUpdateAppWidget(Context context) {
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+        ComponentName thisAppWidget = new ComponentName(context, LiveScoreWidget.class);
+        int[] appWidgetIds = appWidgetManager.getAppWidgetIds(thisAppWidget);
+        onUpdate(context, appWidgetManager, appWidgetIds);
     }
 }
 
