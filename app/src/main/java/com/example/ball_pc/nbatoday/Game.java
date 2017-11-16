@@ -8,5 +8,7 @@ public class Game {
     String away;
     String home;
     String score;
+    String clock;
+    String quarter;
     int statusNum;
 }

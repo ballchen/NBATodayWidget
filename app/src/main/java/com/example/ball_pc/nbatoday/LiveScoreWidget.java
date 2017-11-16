@@ -48,73 +48,79 @@ public class LiveScoreWidget extends AppWidgetProvider {
         views.setOnClickPendingIntent(R.id.homeLogo, getPendingSelfIntent(context, ACTION_UPDATE_BUTTON_CLICK));
         views.setOnClickPendingIntent(R.id.nextButton, getPendingSelfIntent(context, ACTION_NEXT_BUTTON_CLICK));
 //        views.setOnClickPendingIntent(R.id.lastButton, getPendingSelfIntent(context, ACTION_LAST_BUTTON_CLICK));
-
-        try {
-            JsonObjectRequest jsObjRequest = new JsonObjectRequest
-                    (Request.Method.GET, "http://140.112.107.171:4000/today", null, new Response.Listener<JSONObject>() {
-
-                        @Override
-                        public void onResponse(JSONObject response) {
-                            try {
-                                JSONArray gameNums = response.getJSONArray("games");
-                                Gson gson = new Gson();
-                                String gameStatus = new String();
-
-                                GameList = new ArrayList<>();
-                                for (int i = 0; i < gameNums.length(); ++ i) {
-                                    Game tempGame = gson.fromJson(gameNums.get(i).toString(), Game.class);
-                                    GameList.add(tempGame);
-                                }
-
-                                if(currentGameNum >= GameList.size() || currentGameNum < 0) {
-                                    currentGameNum = 0;
-                                }
-
-                                displayGame = GameList.get(currentGameNum);
-
-                                int homeLogoID = context.getResources().getIdentifier(displayGame.home.toLowerCase(), "drawable", context.getPackageName());
-                                int awayLogoID = context.getResources().getIdentifier(displayGame.away.toLowerCase(), "drawable", context.getPackageName());
-
-                                views.setTextViewText(R.id.homeText, displayGame.home);
-                                views.setTextViewText(R.id.awayText, displayGame.away);
-                                views.setTextViewText(R.id.scoreText, displayGame.score);
-
-                                views.setImageViewResource(R.id.awayLogo, awayLogoID);
-                                views.setImageViewResource(R.id.homeLogo, homeLogoID);
-
-                                if(displayGame.statusNum == 1) {
-                                    gameStatus = context.getResources().getString(R.string.status_1);
-                                } else if(displayGame.statusNum == 2) {
-                                    gameStatus = context.getResources().getString(R.string.status_2);
-                                } else if(displayGame.statusNum == 3) {
-                                    gameStatus = context.getResources().getString(R.string.status_3);
-                                }
-                                views.setTextViewText(R.id.game_status, gameStatus);
-
-                                appWidgetManager.updateAppWidget(appWidgetId, views);
+        String scoreboardUrl = "http://nba.ballchen.cc/today";
 
 
-                            } catch (Exception e) {
+        JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                (Request.Method.GET, scoreboardUrl, null, new Response.Listener<JSONObject>() {
 
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            JSONArray gameNums = response.getJSONArray("games");
+                            Gson gson = new Gson();
+                            String gameStatus = new String();
+
+                            GameList = new ArrayList<>();
+                            for (int i = 0; i < gameNums.length(); ++ i) {
+                                Game tempGame = gson.fromJson(gameNums.get(i).toString(), Game.class);
+                                GameList.add(tempGame);
                             }
 
+                            if(currentGameNum >= GameList.size() || currentGameNum < 0) {
+                                currentGameNum = 0;
+                            }
+
+                            displayGame = GameList.get(currentGameNum);
+
+                            int homeLogoID = context.getResources().getIdentifier(displayGame.home.toLowerCase(), "drawable", context.getPackageName());
+                            int awayLogoID = context.getResources().getIdentifier(displayGame.away.toLowerCase(), "drawable", context.getPackageName());
+
+                            views.setTextViewText(R.id.homeText, displayGame.home);
+                            views.setTextViewText(R.id.awayText, displayGame.away);
+                            views.setTextViewText(R.id.scoreText, displayGame.score);
+                            views.setTextViewText(R.id.matchProgress, displayGame.clock);
+
+                            views.setImageViewResource(R.id.awayLogo, awayLogoID);
+                            views.setImageViewResource(R.id.homeLogo, homeLogoID);
+
+                            if(displayGame.statusNum == 1) {
+                                gameStatus = context.getResources().getString(R.string.status_1);
+                            } else if(displayGame.statusNum == 2) {
+                                switch (displayGame.quarter) {
+                                    case "1":
+                                        gameStatus = "第一節";
+                                        break;
+                                    case "2":
+                                        gameStatus = "第二節";
+                                        break;
+                                    case "3":
+                                        gameStatus = "第三節";
+                                        break;
+                                    case "4":
+                                        gameStatus = "第四節";
+                                        break;
+                                }
+                            } else if(displayGame.statusNum == 3) {
+                                gameStatus = context.getResources().getString(R.string.status_3);
+                            }
+                            views.setTextViewText(R.id.game_status, gameStatus);
+                            appWidgetManager.updateAppWidget(appWidgetId, views);
+
+                        } catch (Exception e) {
 
                         }
-                    }, new Response.ErrorListener() {
+                    }
+                }, new Response.ErrorListener() {
 
-                        @Override
-                        public void onErrorResponse(VolleyError error) {
-                            // TODO Auto-generated method stub
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // TODO Auto-generated method stub
 
-                        }
-                    });
+                    }
+                });
 
-            MySingleton.getInstance(context).addToRequestQueue(jsObjRequest);
-        } catch(Exception e) {
-
-        }
-
-
+        MySingleton.getInstance(context).addToRequestQueue(jsObjRequest);
         // Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
@@ -142,26 +148,26 @@ public class LiveScoreWidget extends AppWidgetProvider {
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
         if(intent.getAction().equals(ACTION_UPDATE_BUTTON_CLICK)) {
-            callUpdateAppWidget(context);
+
         }
 
         if(intent.getAction().equals(ACTION_NEXT_BUTTON_CLICK)) {
             if(currentGameNum + 1 < GameList.size()) {
                 currentGameNum ++;
-                callUpdateAppWidget(context);
             }
             else if(currentGameNum + 1 >= GameList.size()) {
                 currentGameNum = 0;
-                callUpdateAppWidget(context);
+
             }
         }
 
         if(intent.getAction().equals(ACTION_LAST_BUTTON_CLICK)) {
             if(0 <= currentGameNum - 1) {
                 currentGameNum --;
-                callUpdateAppWidget(context);
             }
         }
+
+        callUpdateAppWidget(context);
     }
 
     protected static PendingIntent getPendingSelfIntent(Context context, String action) {
